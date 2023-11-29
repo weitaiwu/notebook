@@ -1,0 +1,13 @@
+#工作站
+cd ～/.ssh/
+#创建密匙对
+ssh-keygen -t rsa
+#一路回车，得到一个私钥，一个公钥
+scp id_rsa.pub username@10.20.xx.xx:~/.ssh
+#登录服务器
+cat ~/id_rsa.pub >> ~/.ssh/authorized_keys
+rm id_rsa.pub
+chmod 600 authorized_keys
+cd ..
+chmod 700 .ssh
+#完成设置，重登服务器即可
