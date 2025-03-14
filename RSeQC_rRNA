@@ -1,0 +1,48 @@
+##1.从rfam下载所有的序列##
+wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/12.0/fasta_files/*
+cat RF*.gz>Rfam.all.fa.gz
+
+##2.将multi-line FASTA file 转换成 single-line FASTA file##
+conda install -c bioconda fastx_toolkit
+zcat Rfam.all.fa.gz | fasta_formatter -w 0 | gzip >Rfam.nowrap.fa.gz
+
+##3.删除空行，将空格用下划线代替，并只保留“ribosomal sequence”##
+zcat Rfam.nowrap.fa.gz | \
+sed '/^$/d' | \
+sed 's/[[:space:]]/_/g' | \
+awk 'BEGIN {RS=">"; ORS=""} 
+     tolower($0) ~ /ribosomal_rna/ {print ">"$0}' | \
+gzip > Rfam.rRNA.nowrap.fa.gz
+
+##4.提取感兴趣物种的 ribosomal sequence##
+zcat Rfam.rRNA.nowrap.fa.gz | \
+grep -A 1 -i "^>.*mus_musculus" | \
+grep -v '^--$' | \
+fasta_formatter -w 80 > rRNA.mus_musculus.fa
+
+##5.建立索引##
+awk '/^>/ {id=$0; count[id]++; if (count[id]>1) $0=id"_dup"count[id]; print} !/^>/ {print}' rRNA.mus_musculus.fa > rRNA.mus_musculus.dedup.fa
+samtools faidx rRNA.mus_musculus.dedup.fa
+bowtie2-build rRNA.mus_musculus.dedup.fa rRNA.mus_musculus
+
+##6.ensemble下载数据##
+wget https://ftp.ensembl.org/pub/release-113/fasta/mus_musculus/ncrna/Mus_musculus.GRCm39.ncrna.fa.gz
+zcat Mus_musculus.GRCm39.ncrna.fa.gz | fasta_formatter -w 0 | gzip > Rfam.nowrap2.fa.gz
+
+##7.提取rRNA##
+grep -A 1 "rRNA" Rfam.nowrap2.fa.gz > mus_musculus.rRNA.fa
+
+##8.合并数据##
+cat mus_musculus.rRNA.fa rRNA.mus_musculus.fa > all.mus_musculus.rRNA.fa
+
+##9.建立索引并转成bed格式##
+# 假设 rRNA 区域为单外显子
+samtools faidx all.mus_musculus.rRNA.fa
+awk '{print $1 "\t0\t" $2 "\t" $1 "\t0\t+\t0\t" $2 "\t0\t1\t" $2 "\t0"}' all.mus_musculus.rRNA.fa.fai > all.mus_musculus.bed12
+
+##10.下载RSeQC##
+pip install RSeQC
+python split_bam.py \
+  -i your_input.bam \
+  -r all.mus_musculus.bed12 \
+  -o your_output_prefix
