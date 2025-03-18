@@ -1,0 +1,16 @@
+##1.下载rRNA文件##
+在该网站下载所需rRNA文件
+https://rseqc.sourceforge.net/#download-ribosome-rna-update-on-07-08-2015
+
+##2.下载RSeQC##
+pip install RSeQC
+python split_bam.py \
+  -i your_input.bam \
+  -r all.mus_musculus.bed12 \
+  -o your_output_prefix
+
+例：
+python ~/Downloads/RSeQC-5.0.1/scripts/split_bam.py \
+-i ~/data/SCAFE/ISSAAC_5p/data/ATAC_5pRNA/ZKBL-20241228-L-01-2025-01-141457/Sample_JZ24252891-241225-ISSAAC-5P-6N-RNA-241225-ISSAAC-5P-6N-RNA/star_50/10_per_6N.bam \
+-r mm10_rRNA.bed \
+-o mus_musculus
